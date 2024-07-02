@@ -137,6 +137,8 @@ func (a *GrandChildActor) Receive(ctx actor.ActorContext) {
 
 }
 
+// In the example, we make a NotPanic failure in the grandchild actor, which is first handled by the child actor
+// and then escalated to the parent actor. The child and grandchild are then resumed with working normally
 func main() {
 	actorSystem := actor.NewActorSystem()
 

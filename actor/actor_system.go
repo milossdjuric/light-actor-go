@@ -42,10 +42,6 @@ func (system *ActorSystem) SpawnActor(a Actor, props ...ActorProps) (PID, error)
 func (system *ActorSystem) RespawnActor(a Actor, mailboxPID PID, actorChan chan Envelope, props ...ActorProps) (PID, error) {
 	prop := ConfigureActorProps(props...)
 
-	if actorChan == nil {
-		fmt.Println("ActorChan not found")
-	}
-
 	actorContext := NewActorContext(a, context.Background(), system, prop, mailboxPID, actorChan)
 
 	//Start actor in separate gorutine

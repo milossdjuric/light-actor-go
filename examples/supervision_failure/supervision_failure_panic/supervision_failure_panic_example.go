@@ -36,10 +36,8 @@ func (a *ParentActor) Receive(ctx actor.ActorContext) {
 
 			time.Sleep(1 * time.Second)
 
-			actorSystem.EscalateFailurePanic("NotPanic", childPID)
+			actorSystem.EscalateFailurePanic("Panic", childPID)
 
-		} else if msg == "Panic" {
-			panic("ParentPanic")
 		} else if msg == "Hellooo" {
 			actorSystem := ctx.ActorSystem()
 			fmt.Println("Len of children:", len(ctx.Children()))
@@ -140,10 +138,12 @@ func (a *GrandChildActor) Receive(ctx actor.ActorContext) {
 	}
 }
 
+// In the example, we make a Panic failure for the child actor, the parent then restarts all children, and
+// the grandchildren are stopped
 func main() {
 	actorSystem := actor.NewActorSystem()
 
-	props := actor.NewActorPropsWithStrategies(nil, actor.NewStopAllStrategy(), actor.NewStopAllStrategy())
+	props := actor.NewActorPropsWithStrategies(nil, actor.NewRestartOneStrategy(), actor.NewRestartAllStrategy())
 
 	// Spawn the top-level parent actor
 	parentPID, err := actorSystem.SpawnActor(&ParentActor{}, *props)

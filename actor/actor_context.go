@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 )
 
 // Define the actorState constants
@@ -131,6 +130,7 @@ func (ctx *ActorContext) Props() *ActorProps {
 }
 
 func (ctx *ActorContext) HandleSystemMessage(msg SystemMessage) {
+
 	switch msg.Type {
 	case SystemMessageStart:
 		ctx.Start()
@@ -217,10 +217,7 @@ func (ctx *ActorContext) GracefulStop() {
 	ctx.state = actorStopping
 	// fmt.Println("System message stopping", ctx.self)
 
-	time.Sleep(1 * time.Second)
-
 	ctx.mu.RLock()
-
 	if len(ctx.children) > 0 {
 		for child, _ := range ctx.children {
 			ctx.actorSystem.SendSystemMessage(child, SystemMessage{Type: SystemMessageGracefulStop})
