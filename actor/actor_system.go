@@ -70,7 +70,7 @@ func startActor(a Actor, system *ActorSystem, prop *ActorProps, mailboxPID PID, 
 				actorContext.SuspendChildren()
 				if actorContext.Parent() != nil {
 					failure := Failure{Reason: r, Who: *actorContext.Self(), Actor: a, ActorContext: actorContext, ActorChan: actorChan}
-					system.SendSystemMessage(*actorContext.props.parent, SystemMessage{Type: SystemMessageFailure, Extras: failure})
+					system.SendSystemMessage(*actorContext.props.Parent, SystemMessage{Type: SystemMessageFailure, Extras: failure})
 				} else {
 					actorContext.props.rootStrategy.HandleFailure(system, actorContext, Failure{Reason: r, Who: *actorContext.Self(), Actor: a, ActorContext: actorContext, ActorChan: actorChan})
 				}
@@ -107,7 +107,7 @@ func startActorWithContext(a Actor, system *ActorSystem, actorContext *ActorCont
 					failure := Failure{Reason: r, Who: *actorContext.Self(), Actor: a, ActorContext: actorContext, ActorChan: actorChan}
 
 					actorContext.SuspendChildren()
-					system.SendSystemMessage(*actorContext.props.parent, SystemMessage{Type: SystemMessageFailure, Extras: failure})
+					system.SendSystemMessage(*actorContext.props.Parent, SystemMessage{Type: SystemMessageFailure, Extras: failure})
 				} else {
 					actorContext.props.rootStrategy.HandleFailure(system, actorContext, Failure{Reason: r, Who: *actorContext.Self(), Actor: a, ActorContext: actorContext, ActorChan: actorChan})
 				}

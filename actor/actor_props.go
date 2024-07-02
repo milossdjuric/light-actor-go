@@ -1,14 +1,14 @@
 package actor
 
 type ActorProps struct {
-	parent              *PID
+	Parent              *PID
 	rootStrategy        FailureStrategy
 	supervisionStrategy FailureStrategy
 }
 
 func NewActorProps(parent *PID) *ActorProps {
 	return &ActorProps{
-		parent:              parent,
+		Parent:              parent,
 		rootStrategy:        defaultRootStrategy,
 		supervisionStrategy: defaultSupervisionStrategy,
 	}
@@ -16,7 +16,7 @@ func NewActorProps(parent *PID) *ActorProps {
 
 func NewActorPropsWithStrategies(parent *PID, rootStrategy, supervisionStrategy FailureStrategy) *ActorProps {
 	return &ActorProps{
-		parent:              parent,
+		Parent:              parent,
 		rootStrategy:        rootStrategy,
 		supervisionStrategy: supervisionStrategy,
 	}
@@ -57,7 +57,7 @@ func (prop *ActorProps) SupervisionStrategy() FailureStrategy {
 
 func defaultConfig() *ActorProps {
 	return &ActorProps{
-		parent:              nil,
+		Parent:              nil,
 		rootStrategy:        defaultRootStrategy,
 		supervisionStrategy: defaultSupervisionStrategy,
 	}

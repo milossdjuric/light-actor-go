@@ -21,7 +21,7 @@ type ActorContext struct {
 	actor       Actor
 	actorSystem *ActorSystem
 	ctx         context.Context
-	Props       *ActorProps
+	props       *ActorProps
 	envelope    Envelope
 	state       actorState
 	children    map[PID]bool
@@ -35,7 +35,7 @@ func NewActorContext(actor Actor, ctx context.Context, actorSystem *ActorSystem,
 	context := new(ActorContext)
 	context.actor = actor
 	context.ctx = ctx
-	context.Props = Props
+	context.props = props
 	context.state = actorStart
 	context.actorSystem = actorSystem
 	context.self = self
@@ -105,7 +105,7 @@ func (ctx *ActorContext) ActorSystem() *ActorSystem {
 }
 
 func (ctx *ActorContext) Parent() *PID {
-	return ctx.props.parent
+	return ctx.props.Parent
 }
 
 func (ctx *ActorContext) Children() []*PID {
@@ -229,8 +229,8 @@ func (ctx *ActorContext) GracefulStop() {
 		ctx.mu.RUnlock()
 	} else {
 		ctx.mu.RUnlock()
-		if ctx.Props.Parent != nil {
-			ctx.actorSystem.SendSystemMessage(*ctx.Props.Parent, SystemMessage{Type: SystemMessageChildTerminated, Extras: ctx.self})
+		if ctx.props.Parent != nil {
+			ctx.actorSystem.SendSystemMessage(*ctx.props.Parent, SystemMessage{Type: SystemMessageChildTerminated, Extras: ctx.self})
 		}
 		// fmt.Println("No children, actor stopped", ctx.self)
 		ctx.actorSystem.RemoveActor(ctx.self, SystemMessage{Type: DeleteMailbox})
@@ -248,8 +248,8 @@ func (ctx *ActorContext) ChildTerminated(child PID) {
 	ctx.mu.RLock()
 	if len(ctx.children) == 0 && ctx.state == actorStopping {
 		ctx.mu.RUnlock()
-		if ctx.Props.Parent != nil {
-			ctx.actorSystem.SendSystemMessage(*ctx.Props.Parent, SystemMessage{Type: SystemMessageChildTerminated, Extras: ctx.self})
+		if ctx.props.Parent != nil {
+			ctx.actorSystem.SendSystemMessage(*ctx.props.Parent, SystemMessage{Type: SystemMessageChildTerminated, Extras: ctx.self})
 		}
 		ctx.actorSystem.RemoveActor(ctx.self, SystemMessage{Type: DeleteMailbox})
 		ctx.state = actorStop
@@ -291,8 +291,8 @@ func (ctx *ActorContext) EscalateFailure(failure Failure) {
 		ctx.actorSystem.SendSystemMessage(ctx.self, SystemMessage{Type: SuspendMailbox})
 		ctx.SuspendChildren()
 
-		if ctx.props.parent != nil {
-			ctx.actorSystem.SendSystemMessage(*ctx.props.parent, SystemMessage{Type: SystemMessageFailure, Extras: supervisorFailure})
+		if ctx.props.Parent != nil {
+			ctx.actorSystem.SendSystemMessage(*ctx.props.Parent, SystemMessage{Type: SystemMessageFailure, Extras: supervisorFailure})
 		} else {
 			ctx.props.RootStrategy().HandleFailure(ctx.actorSystem, ctx, supervisorFailure)
 		}

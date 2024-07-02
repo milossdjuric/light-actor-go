@@ -32,11 +32,11 @@ func (a *SumActor) Receive(ctx actor.ActorContext) {
 					fmt.Println("Time taken:", elapsed) // Print elapsed time
 					a.wg.Done()                         // Signal completion
 				} else {
-					envelope := actor.NewEnvelope(ResultMessage{Result: a.sum}, *ctx.Props.Parent)
+					envelope := actor.NewEnvelope(ResultMessage{Result: a.sum}, *ctx.Props().Parent)
 					ctx.ActorSystem().Send(envelope)
 				}
 			} else {
-				envelope := actor.NewEnvelope(ResultMessage{Result: a.sum}, *ctx.Props.Parent)
+				envelope := actor.NewEnvelope(ResultMessage{Result: a.sum}, *ctx.Props().Parent)
 				ctx.ActorSystem().Send(envelope)
 			}
 		}
@@ -46,7 +46,7 @@ func (a *SumActor) Receive(ctx actor.ActorContext) {
 			for i := 0; i < 10; i++ {
 				childOrdinal := msg.Ordinal*10 + i
 				self := ctx.Self()
-				props := actor.NewActorProps(&self)
+				props := actor.NewActorProps(self)
 				childPID, err := ctx.SpawnActor(&SumActor{level: a.level + 1, wg: a.wg}, *props)
 				if err != nil {
 					fmt.Println("Failed to spawn child:", err)
@@ -56,7 +56,7 @@ func (a *SumActor) Receive(ctx actor.ActorContext) {
 				ctx.ActorSystem().Send(envelope)
 			}
 		} else {
-			envelope := actor.NewEnvelope(ResultMessage{Result: msg.Ordinal}, *ctx.Props.Parent)
+			envelope := actor.NewEnvelope(ResultMessage{Result: msg.Ordinal}, *ctx.Props().Parent)
 			ctx.ActorSystem().Send(envelope)
 		}
 	default:

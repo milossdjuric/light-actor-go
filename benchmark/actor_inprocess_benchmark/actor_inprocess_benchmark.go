@@ -32,7 +32,7 @@ type PongActor struct{}
 func (p *PongActor) Receive(ctx actor.ActorContext) {
 	switch msg := ctx.Message().(type) {
 	case *Msg:
-		ctx.Send(&Msg{Sender: ctx.Self()}, msg.Sender)
+		ctx.Send(&Msg{Sender: *ctx.Self()}, msg.Sender)
 	}
 }
 
@@ -42,7 +42,7 @@ func (p *PingActor) sendBatch(ctx actor.ActorContext, sender actor.PID) bool {
 	}
 
 	msg := &Msg{
-		Sender: ctx.Self(),
+		Sender: *ctx.Self(),
 	}
 
 	for i := 0; i < p.batchSize; i++ {
