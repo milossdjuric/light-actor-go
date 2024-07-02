@@ -29,8 +29,8 @@ func ConfigureActorProps(props ...ActorProps) *ActorProps {
 	return defaultConfig()
 }
 
-func (prop *ActorProps) AddParent(parent *PID) {
-	prop.parent = parent
+func (prop *ActorProps) AddParent(Parent *PID) {
+	prop.Parent = Parent
 }
 
 func (prop *ActorProps) SetRootStrategy(strategy FailureStrategy) {
