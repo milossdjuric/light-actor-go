@@ -10,13 +10,13 @@ import (
 type ParentActor struct{}
 
 func (a *ParentActor) Receive(ctx actor.ActorContext) {
+	// fmt.Println("Parent actor received message:", ctx.Message())
 
 	switch msg := ctx.Message().(type) {
 	case string:
-		fmt.Println("Parent actor received:", msg)
 		if msg == "SpawnChild" {
 			self := ctx.Self()
-			childProps := actor.NewActorProps(&self) // Child actor will not have a parent
+			childProps := actor.NewActorProps(self) // Child actor will not have a parent
 
 			actorSystem := ctx.ActorSystem()
 
@@ -26,26 +26,35 @@ func (a *ParentActor) Receive(ctx actor.ActorContext) {
 
 			actorSystem.Send(actor.NewEnvelope("SpawnGrandchild", childPID))
 		}
+	case actor.SystemMessage:
+		switch msg.Type {
+		case actor.SystemMessageStop:
+			fmt.Println("Parent actor received stop message")
+		case actor.SystemMessageGracefulStop:
+			fmt.Println("Parent actor received graceful stop message")
+		case actor.SystemMessageChildTerminated:
+			fmt.Println("Parent actor received child terminated message")
+		case actor.SystemMessageStart:
+			fmt.Println("Parent actor received start message")
+		}
 	}
+
 }
 
 // ChildActor is spawned by ParentActor and spawns another actor
 type ChildActor struct{}
 
 func (a *ChildActor) Receive(ctx actor.ActorContext) {
+	// fmt.Println("Child actor received message:", ctx.Message())
 
 	switch msg := ctx.Message().(type) {
 	case string:
 		fmt.Println("Child actor received:", msg)
 		if msg == "SpawnGrandchild" {
 			self := ctx.Self()
-			grandChildProps := actor.NewActorProps(&self)
-			grandChildPID, _ := ctx.SpawnActor(&GrandChildActor{}, *grandChildProps)
-			actorSystem := ctx.ActorSystem()
+			grandChildProps := actor.NewActorProps(self)
+			ctx.SpawnActor(&GrandChildActor{}, *grandChildProps)
 
-			time.Sleep(1 * time.Second)
-
-			actorSystem.Send(actor.NewEnvelope("Hello from child to grandchild", grandChildPID))
 		}
 	case actor.SystemMessage:
 		switch msg.Type {
@@ -65,11 +74,22 @@ func (a *ChildActor) Receive(ctx actor.ActorContext) {
 type GrandChildActor struct{}
 
 func (a *GrandChildActor) Receive(ctx actor.ActorContext) {
-	fmt.Println("Grandchild actor received message:", ctx.Message())
+	// fmt.Println("Grandchild actor received message:", ctx.Message())
 
 	switch msg := ctx.Message().(type) {
 	case string:
 		fmt.Println("Grandchild actor received:", msg)
+	case actor.SystemMessage:
+		switch msg.Type {
+		case actor.SystemMessageStop:
+			fmt.Println("Grandchild actor received stop message")
+		case actor.SystemMessageGracefulStop:
+			fmt.Println("Grandchild actor received graceful stop message")
+		case actor.SystemMessageChildTerminated:
+			fmt.Println("Grandchild actor received child terminated message")
+		case actor.SystemMessageStart:
+			fmt.Println("Grandchild actor received start message")
+		}
 	}
 }
 
@@ -85,15 +105,17 @@ func main() {
 
 	time.Sleep(1 * time.Second)
 
-	// Send a message to parent actor to trigger spawning a child
 	actorSystem.Send(actor.NewEnvelope("SpawnChild", parentPID))
 
-	// Wait for a while to simulate some work happening
 	time.Sleep(3 * time.Second)
 
 	// Trigger graceful stop of parent actor
 	actorSystem.GracefulStop(parentPID)
 
-	// Wait for a while to see the output
-	time.Sleep(3 * time.Second)
+	time.Sleep(2 * time.Second)
+
+	// Hello is to be ignored as parent actor is in stopping state
+	actorSystem.Send(actor.NewEnvelope("Hellooooo", parentPID))
+
+	time.Sleep(10 * time.Second)
 }
