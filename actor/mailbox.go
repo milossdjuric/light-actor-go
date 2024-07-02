@@ -1,9 +1,5 @@
 package actor
 
-import (
-	"time"
-)
-
 type mailboxState int32
 
 const (
@@ -12,95 +8,134 @@ const (
 )
 
 type Mailbox struct {
-	actorChan   chan Envelope
-	mailboxChan chan Envelope
-	queue       []Envelope
-	state       mailboxState
+	actorChan      chan Envelope
+	mailboxChan    chan Envelope
+	queue          []Envelope
+	suspendedQueue []Envelope
+	state          mailboxState
 }
 
 func NewMailbox(actorChan chan Envelope) *Mailbox {
 	m := &Mailbox{
-		actorChan:   actorChan,
-		mailboxChan: make(chan Envelope),
-		queue:       make([]Envelope, 0),
-		state:       mailboxSuspended,
+		actorChan:      actorChan,
+		mailboxChan:    make(chan Envelope),
+		queue:          make([]Envelope, 0),
+		suspendedQueue: make([]Envelope, 0),
+		state:          mailboxSuspended,
 	}
 	return m
 }
 
-func (m *Mailbox) buffer(msg Envelope) {
-	m.queue = append(m.queue, msg)
+func (m *Mailbox) buffer(envelope Envelope) {
+	if m.state == mailboxRunning {
+		m.queue = append(m.queue, envelope)
+		return
+	} else if m.state == mailboxSuspended {
+		switch envelope.Message.(type) {
+		case SystemMessage:
+			m.queue = append(m.queue, envelope)
+			return
+		default:
+			// not adding envelope to buffer
+		}
+	}
+
 }
 
 func (m *Mailbox) getEnvelope() Envelope {
-	if len(m.queue) > 0 {
-		return m.queue[0]
-	}
-	return Envelope{}
-}
-
-func (m *Mailbox) removeFirstEnvelope() {
-	if len(m.queue) > 0 {
+	defer func() {
 		m.queue = m.queue[1:]
-	}
-}
-
-func (m *Mailbox) moveToBack() {
-	if len(m.queue) > 0 {
-		m.queue = append(m.queue[1:], m.queue[0])
-	}
+	}()
+	return m.queue[0]
 }
 
 func (m *Mailbox) Start() {
 	m.state = mailboxRunning
-
+	var newEnvelope Envelope
+	var haveReady bool = false
 	for {
-		select {
-		case envelope := <-m.mailboxChan:
-			// fmt.Println("Mailbox received message:", envelope.Message)
-			m.buffer(envelope)
-		default:
-			if len(m.queue) > 0 {
-				envelope := m.getEnvelope()
-				if msg, ok := envelope.Message.(SystemMessage); ok {
-					// Handle state transitions before sending the message to actorChan
-					switch msg.Type {
-					case DeleteMailbox:
-						// fmt.Println("Deleting mailbox")
-						m.delete()
-						return
-					case SuspendMailbox, SuspendMailboxAll, SystemMessageGracefulStop:
-						m.state = mailboxSuspended
-						// fmt.Println("Suspending mailbox state:", m.state)
-					case ResumeMailbox, ResumeMailboxAll:
-						m.state = mailboxRunning
-						// fmt.Println("Resuming mailbox state:", m.state)
-					}
+		for haveReady {
+			if m.state == mailboxSuspended {
 
-					select {
-					case m.actorChan <- envelope:
-						// fmt.Println("Sending system message to actor channel:", msg)
-						m.removeFirstEnvelope()
-					case <-time.After(100 * time.Millisecond):
-						// fmt.Println("Failed to send system message to actor channel, timed out:", msg)
-						m.moveToBack()
+				select {
+				case m.actorChan <- newEnvelope:
+					if len(m.queue) > 0 {
+						newEnvelope = m.getEnvelope()
+					} else {
+						haveReady = false
 					}
-				} else if m.state == mailboxRunning {
-					select {
-					case m.actorChan <- envelope:
-						// fmt.Println("Sending to actor channel:", envelope.Message)
-						m.removeFirstEnvelope()
-					case <-time.After(100 * time.Millisecond):
-						// fmt.Println("Failed to send message to actor channel, timed out:", envelope.Message)
-						m.moveToBack()
+				case envelope := <-m.mailboxChan:
+					switch msg := envelope.Message.(type) {
+					case SystemMessage:
+						if msg.Type == DeleteMailbox {
+							m.delete()
+							return
+						}
+						m.buffer(envelope)
+					default:
+						// add to suspended queue
+						m.suspendedQueue = append(m.suspendedQueue, envelope)
 					}
-				} else if m.state == mailboxSuspended {
-					m.moveToBack()
-					time.Sleep(100 * time.Millisecond)
-					// fmt.Println("Non-system message moved to back of queue:", envelope.Message)
+				}
+
+			} else {
+				if len(m.suspendedQueue) > 0 {
+					m.queue = append(m.queue, m.suspendedQueue...)
+					m.suspendedQueue = m.suspendedQueue[1:]
+				}
+				select {
+				case m.actorChan <- newEnvelope:
+					if len(m.queue) > 0 {
+						newEnvelope = m.getEnvelope()
+					} else {
+						haveReady = false
+					}
+				case envelope := <-m.mailboxChan:
+					switch msg := envelope.Message.(type) {
+					case SystemMessage:
+						if msg.Type == DeleteMailbox {
+							// fmt.Println("Delete mailbox")
+							m.delete()
+							return
+						} else if msg.Type == SuspendMailbox || msg.Type == SuspendMailboxAll || msg.Type == SystemMessageGracefulStop {
+							m.state = mailboxSuspended
+							// fmt.Println("Suspend mailbox: ", m.state)
+						} else if msg.Type == ResumeMailbox || msg.Type == ResumeMailboxAll {
+							m.state = mailboxRunning
+							// fmt.Println("Resume mailbox: ", m.state)
+						}
+					}
+					m.buffer(envelope)
 				}
 			}
+
 		}
+		newEnvelope = <-m.mailboxChan
+		switch msg := newEnvelope.Message.(type) {
+		case SystemMessage:
+			if msg.Type == DeleteMailbox {
+				// fmt.Println("Delete mailbox")
+				m.delete()
+				return
+			} else if msg.Type == SuspendMailbox || msg.Type == SuspendMailboxAll || msg.Type == SystemMessageGracefulStop {
+				m.state = mailboxSuspended
+				// fmt.Println("Suspend mailbox: ", m.state)
+			} else if msg.Type == ResumeMailbox || msg.Type == ResumeMailboxAll {
+				m.state = mailboxRunning
+				// fmt.Println("Resume mailbox: ", m.state)
+			}
+		}
+		if m.state == mailboxRunning {
+			haveReady = true
+		} else {
+			switch newEnvelope.Message.(type) {
+			case SystemMessage:
+				haveReady = true
+			default:
+				m.suspendedQueue = append(m.suspendedQueue, newEnvelope)
+			}
+		}
+
 	}
 }
 
