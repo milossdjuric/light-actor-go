@@ -3,6 +3,7 @@ package actor
 import (
 	"context"
 	"fmt"
+	"log"
 )
 
 type ActorSystem struct {
@@ -148,7 +149,12 @@ func (system *ActorSystem) Send(envelope Envelope) {
 }
 
 func (system *ActorSystem) AddRemoteActor(remoteActorPID PID, senderChan chan Envelope) {
+	log.Println("[ACTOR SYSTEM] Adding remote actor to registry: ", remoteActorPID)
 	system.registry.Add(remoteActorPID, senderChan)
+}
+
+func (system *ActorSystem) RemoveRemoteActor(remoteActorPID PID) {
+	system.registry.Remove(remoteActorPID)
 }
 
 func (system *ActorSystem) SendSystemMessage(receiver PID, msg SystemMessage) {

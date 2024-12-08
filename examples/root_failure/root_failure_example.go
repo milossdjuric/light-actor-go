@@ -139,7 +139,7 @@ func (a *GrandChildActor) Receive(ctx actor.ActorContext) {
 	}
 }
 
-// In the example, we make a Panic  failure for parent actor, which then tries to restart itself, and stops its
+// In the example, we make a Panic failure for parent actor, which then tries to restart itself, and stops its
 // children and grandchildren in the process
 func main() {
 	actorSystem := actor.NewActorSystem()

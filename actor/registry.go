@@ -2,6 +2,7 @@ package actor
 
 import (
 	"fmt"
+	"log"
 	"sync"
 )
 
@@ -18,6 +19,8 @@ func (r *Registry) Add(pid PID, ch chan Envelope) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.mapping[pid] = ch
+	log.Println("[REGISTRY] Added PID to registry: ", pid)
+	log.Println("[REGISTRY] Channel: ", ch)
 	return nil
 }
 
