@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"fmt"
-	"log"
 	"math/big"
 	"math/rand"
 	"sort"
@@ -71,13 +70,20 @@ func (dht *KademliaDHT) Remove(hostname, port string) {
 	bucket := dht.buckets[bucketIndex]
 
 	// Log the removal attempt
-	log.Printf("[Remove] Removing node with ID: %s from bucket %d (distance: %d)\n", nodeId, bucketIndex, distance)
+	// log.Printf("[Remove] Removing node with ID: %s from bucket %d (distance: %d)\n", nodeId, bucketIndex, distance)
 
 	// Perform the removal
 	delete(bucket.nodes, nodeId)
 
 	// Log the result
-	log.Printf("[Remove] Node with ID: %s removed from bucket %d\n", nodeId, bucketIndex)
+	// log.Printf("[Remove] Node with ID: %s removed from bucket %d\n", nodeId, bucketIndex)
+}
+
+func (dht *KademliaDHT) RemoveAll() {
+	for bucket := range dht.buckets {
+		dht.buckets[bucket].nodes = make(map[string]KademliaNode)
+	}
+	// fmt.Println("[RemoveAllNodes] All nodes removed from DHT")
 }
 
 func (dht *KademliaDHT) Store(hostname, port string, state KademliaNodeState, lastPing time.Time) string {
@@ -88,12 +94,12 @@ func (dht *KademliaDHT) Store(hostname, port string, state KademliaNodeState, la
 	bucket := dht.buckets[bucketIndex]
 
 	// Log the store attempt
-	log.Printf("[Store] Storing node with ID: %s in bucket %d (distance: %d)\n", newNodeId, bucketIndex, distance)
+	// log.Printf("[Store] Storing node with ID: %s in bucket %d (distance: %d)\n", newNodeId, bucketIndex, distance)
 
 	// Idempotent put
 	if _, exists := bucket.nodes[newNodeId]; exists {
 		// Log the update of an existing node
-		log.Printf("[Store] Node with ID: %s already exists, updating its state\n", newNodeId)
+		// log.Printf("[Store] Node with ID: %s already exists, updating its state\n", newNodeId)
 		bucket.nodes[newNodeId] = newNode
 		return newNodeId
 	}
@@ -101,11 +107,11 @@ func (dht *KademliaDHT) Store(hostname, port string, state KademliaNodeState, la
 	// Handle case when adding a new node to a non-full bucket
 	if len(bucket.nodes) < bucketSize {
 		// Log the addition of a new node to the bucket
-		log.Printf("[Store] Adding new node with ID: %s to bucket %d\n", newNodeId, bucketIndex)
+		// log.Printf("[Store] Adding new node with ID: %s to bucket %d\n", newNodeId, bucketIndex)
 		bucket.nodes[newNodeId] = newNode
 	} else {
 		// Handle the case when the bucket is full
-		log.Printf("[Store] Bucket %d is full, cannot add new node with ID: %s\n", bucketIndex, newNodeId)
+		// log.Printf("[Store] Bucket %d is full, cannot add new node with ID: %s\n", bucketIndex, newNodeId)
 	}
 
 	return newNodeId
@@ -117,7 +123,7 @@ func (dht *KademliaDHT) Find(nodeId string) []KademliaNode {
 	bucket := dht.buckets[bucketIndex]
 
 	// Log the find attempt
-	log.Printf("[Find] Finding closest nodes to node ID: %s in bucket %d (distance: %d)\n", nodeId, bucketIndex, distance)
+	// log.Printf("[Find] Finding closest nodes to node ID: %s in bucket %d (distance: %d)\n", nodeId, bucketIndex, distance)
 
 	closestNodes := make([]KademliaNode, 0)
 	for _, node := range bucket.nodes {
@@ -128,7 +134,7 @@ func (dht *KademliaDHT) Find(nodeId string) []KademliaNode {
 	}
 
 	// Log the found nodes
-	log.Printf("[Find] Found %d closest nodes for node ID: %s\n", len(closestNodes), nodeId)
+	// log.Printf("[Find] Found %d closest nodes for node ID: %s\n", len(closestNodes), nodeId)
 
 	return closestNodes
 }
@@ -139,7 +145,7 @@ func (dht *KademliaDHT) FindStringified(nodeId string) string {
 	bucket := dht.buckets[bucketIndex]
 
 	// Log the find stringified attempt
-	log.Printf("[FindStringified] Finding closest nodes to node ID: %s in bucket %d (distance: %d)\n", nodeId, bucketIndex, distance)
+	// log.Printf("[FindStringified] Finding closest nodes to node ID: %s in bucket %d (distance: %d)\n", nodeId, bucketIndex, distance)
 
 	closestNodes := ""
 	for _, node := range bucket.nodes {
@@ -147,7 +153,7 @@ func (dht *KademliaDHT) FindStringified(nodeId string) string {
 	}
 
 	// Log the result
-	log.Printf("[FindStringified] Found closest nodes for node ID: %s: %s\n", nodeId, closestNodes)
+	// log.Printf("[FindStringified] Found closest nodes for node ID: %s: %s\n", nodeId, closestNodes)
 
 	return closestNodes
 }
@@ -156,14 +162,14 @@ func (dht *KademliaDHT) RandomNode() *KademliaNode {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// Log the start of the random node selection process
-	log.Println("[RandomNode] Starting random node selection...")
+	// log.Println("[RandomNode] Starting random node selection...")
 
 	for {
 		bucketIndex := r.Intn(len(dht.buckets))
 		bucket := dht.buckets[bucketIndex]
 
 		// Log the selected bucket index
-		log.Printf("[RandomNode] Selected bucket index: %d\n", bucketIndex)
+		// log.Printf("[RandomNode] Selected bucket index: %d\n", bucketIndex)
 
 		if len(bucket.nodes) > 0 {
 			nodes := make([]KademliaNode, 0, len(bucket.nodes))
@@ -172,16 +178,16 @@ func (dht *KademliaDHT) RandomNode() *KademliaNode {
 			}
 
 			// Log the number of nodes in the selected bucket
-			log.Printf("[RandomNode] Found %d nodes in the selected bucket\n", len(nodes))
+			// log.Printf("[RandomNode] Found %d nodes in the selected bucket\n", len(nodes))
 
 			randomIndex := r.Intn(len(nodes))
 			// Log the selected random node ID
-			log.Printf("[RandomNode] Selected random node with ID: %s\n", nodes[randomIndex].nodeId)
+			// log.Printf("[RandomNode] Selected random node with ID: %s\n", nodes[randomIndex].nodeId)
 			return &nodes[randomIndex]
 		}
 	}
 	// In case no node is found (shouldn't happen in normal conditions)
-	log.Println("[RandomNode] No node found, returning empty node")
+	// log.Println("[RandomNode] No node found, returning empty node")
 	return &KademliaNode{}
 }
 
@@ -190,14 +196,14 @@ func (dht *KademliaDHT) RandomNodesBatch() []KademliaNode {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// Log the start of the batch random node selection process
-	log.Println("[RandomNodesBatch] Starting random batch node selection...")
+	// log.Println("[RandomNodesBatch] Starting random batch node selection...")
 
 	for {
 		bucketIndex := r.Intn(len(dht.buckets))
 		bucket := dht.buckets[bucketIndex]
 
 		// Log the selected bucket index
-		log.Printf("[RandomNodesBatch] Selected bucket index: %d\n", bucketIndex)
+		// log.Printf("[RandomNodesBatch] Selected bucket index: %d\n", bucketIndex)
 
 		if len(bucket.nodes) > 0 {
 			nodes := make([]KademliaNode, 0, len(bucket.nodes))
@@ -206,7 +212,7 @@ func (dht *KademliaDHT) RandomNodesBatch() []KademliaNode {
 			}
 
 			// Log the number of nodes found in the selected bucket
-			log.Printf("[RandomNodesBatch] Found %d nodes in the selected bucket\n", len(nodes))
+			// log.Printf("[RandomNodesBatch] Found %d nodes in the selected bucket\n", len(nodes))
 
 			return nodes
 		}
@@ -215,7 +221,7 @@ func (dht *KademliaDHT) RandomNodesBatch() []KademliaNode {
 
 // Process of selecting a rendezvous node based on a key
 func (dht *KademliaDHT) RendezvousNode(key string) *KademliaNode {
-	log.Printf("[RendezvousNode] Starting rendezvous process for key: %s\n", key)
+	// log.Printf("[RendezvousNode] Starting rendezvous process for key: %s\n", key)
 	selectedNode := &KademliaNode{}
 	maxWeight := new(big.Int)
 
@@ -223,11 +229,11 @@ func (dht *KademliaDHT) RendezvousNode(key string) *KademliaNode {
 	for _, bucket := range dht.buckets {
 		for _, node := range bucket.nodes {
 			// Log the current node being evaluated
-			log.Printf("[RendezvousNode] Evaluating node ID: %s, State: %s\n", node.nodeId, node.state)
+			// log.Printf("[RendezvousNode] Evaluating node ID: %s, State: %s\n", node.nodeId, node.state)
 
 			// Skip unhealthy nodes
 			if node.state != NodeHealthy {
-				log.Printf("[RendezvousNode] Node %s is not healthy, skipping...\n", node.nodeId)
+				// log.Printf("[RendezvousNode] Node %s is not healthy, skipping...\n", node.nodeId)
 				continue
 			}
 
@@ -236,14 +242,14 @@ func (dht *KademliaDHT) RendezvousNode(key string) *KademliaNode {
 
 			// Log the calculated weight
 			if weight != nil {
-				log.Printf("[RendezvousNode] Calculated weight for node %s: %s\n", node.nodeId, weight.String())
+				// log.Printf("[RendezvousNode] Calculated weight for node %s: %s\n", node.nodeId, weight.String())
 			} else {
-				log.Printf("[RendezvousNode] Weight calculation returned nil for node %s\n", node.nodeId)
+				// log.Printf("[RendezvousNode] Weight calculation returned nil for node %s\n", node.nodeId)
 			}
 
 			// Compare the weight and select the node with the highest weight
 			if weight == nil || weight.Cmp(maxWeight) > 0 {
-				log.Printf("[RendezvousNode] Node %s selected with weight: %s\n", node.nodeId, weight.String())
+				// log.Printf("[RendezvousNode] Node %s selected with weight: %s\n", node.nodeId, weight.String())
 				if node.nodeId == dht.nodeId {
 					continue
 				}
@@ -254,14 +260,14 @@ func (dht *KademliaDHT) RendezvousNode(key string) *KademliaNode {
 	}
 
 	// Log the final selected node
-	log.Printf("[RendezvousNode] Final selected node: %s with weight: %s\n", selectedNode.nodeId, maxWeight.String())
+	// log.Printf("[RendezvousNode] Final selected node: %s with weight: %s\n", selectedNode.nodeId, maxWeight.String())
 
 	return selectedNode
 }
 
 // Select a batch of rendezvous nodes based on a key
 func (dht *KademliaDHT) RendezvousNodeBatch(key string) []KademliaNode {
-	log.Printf("[RendezvousNodeBatch] Starting batch rendezvous process for key: %s\n", key)
+	// log.Printf("[RendezvousNodeBatch] Starting batch rendezvous process for key: %s\n", key)
 	scoredNodes := make([]ScoredNode, 0)
 
 	// Iterate through the buckets to evaluate nodes
@@ -275,7 +281,7 @@ func (dht *KademliaDHT) RendezvousNodeBatch(key string) []KademliaNode {
 			weight := CalculateWeight(key, node.nodeId)
 
 			// Log the node and its weight
-			log.Printf("[RendezvousNodeBatch] Node ID: %s, Weight: %s\n", node.nodeId, weight.String())
+			// log.Printf("[RendezvousNodeBatch] Node ID: %s, Weight: %s\n", node.nodeId, weight.String())
 
 			scoredNodes = append(scoredNodes, ScoredNode{node: &node, weight: weight})
 		}
@@ -293,7 +299,7 @@ func (dht *KademliaDHT) RendezvousNodeBatch(key string) []KademliaNode {
 	}
 
 	// Log the selected nodes
-	log.Printf("[RendezvousNodeBatch] Selected %d nodes for key: %s\n", len(selectedNodes), key)
+	// log.Printf("[RendezvousNodeBatch] Selected %d nodes for key: %s\n", len(selectedNodes), key)
 
 	return selectedNodes
 }
@@ -301,6 +307,6 @@ func (dht *KademliaDHT) RendezvousNodeBatch(key string) []KademliaNode {
 // NodeId method for the KademliaNode struct
 func (node *KademliaNode) NodeId() string {
 	// Log the retrieval of the node ID
-	log.Printf("[NodeId] Retrieving node ID: %s\n", node.nodeId)
+	// log.Printf("[NodeId] Retrieving node ID: %s\n", node.nodeId)
 	return node.nodeId
 }

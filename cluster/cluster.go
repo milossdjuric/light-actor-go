@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"light-actor-go/actor"
 	"light-actor-go/remote"
-	"log"
 	"math/big"
 	"time"
 
@@ -161,7 +160,7 @@ func (c *ClusterActor) startGossip(ctx actor.ActorContext) {
 		return
 	}
 
-	log.Println("[DEBUG] ClusterActor %s STARTING GOSSIP", c.id)
+	// log.Println("[DEBUG] ClusterActor %s STARTING GOSSIP", c.id)
 	c.ticker = time.NewTicker(10 * time.Millisecond)
 	go func() {
 		for {
@@ -187,8 +186,6 @@ func (c *ClusterActor) gossip(ctx actor.ActorContext, remote *remote.Remote) {
 		return
 	}
 
-	fmt.Printf("[DEBUG] Random node selected: %s:%s\n", node.hostname, node.port)
-
 	msg := ctx.Message().(*Gossip)
 
 	swimPing := &SwimPing{
@@ -203,10 +200,6 @@ func (c *ClusterActor) gossip(ctx actor.ActorContext, remote *remote.Remote) {
 	}
 
 	fmt.Printf("[DEBUG] ClusterActor %s Gossiping to %s:%s\n", c.id, node.hostname, node.port)
-
-	if c.dht.port == "8100" || c.dht.port == "8010" {
-		fmt.Println("[STARTER NODE] Sending gossip message to node:", node.hostname, node.port)
-	}
 
 	err := c.sendMessageToRemoteActor(ctx,
 		HostnamePortToAddress(node.hostname, node.port),
@@ -254,6 +247,9 @@ func (c *ClusterActor) gossipBatch(ctx actor.ActorContext, remote *remote.Remote
 func (c *ClusterActor) disownSelf(ctx actor.ActorContext) {
 	c.gossipDisownSelf(ctx)
 	c.stopGossip <- struct{}{}
+	for {
+		fmt.Println("DISOWNING SELF")
+	}
 }
 
 func (c *ClusterActor) gossipDisownSelf(ctx actor.ActorContext) {
@@ -286,11 +282,11 @@ func (c *ClusterActor) suspectCheck(ctx actor.ActorContext, remote *remote.Remot
 	closestNodesStringified := c.dht.FindStringified(c.dht.nodeId)
 	node := c.dht.RendezvousNode(closestNodesStringified)
 	if node.hostname == "" && node.port == "" && node.nodeId == "" {
-		fmt.Println("[DEBUG] No nodes in DHT to gossip to")
+		// fmt.Println("[DEBUG] No nodes in DHT to gossip to")
 		return
 	}
 
-	fmt.Printf("[DEBUG] ClusterActor %s Checking suspect node %s:%s\n", c.id, node.hostname, node.port)
+	// fmt.Printf("[DEBUG] ClusterActor %s Checking suspect node %s:%s\n", c.id, node.hostname, node.port)
 	if node.state == NodeHealthy && node.lastPing.Add(5*time.Second).Before(time.Now()) {
 		c.dht.Store(node.hostname, node.port, NodeSuspect, node.lastPing)
 
@@ -303,7 +299,7 @@ func (c *ClusterActor) suspectCheck(ctx actor.ActorContext, remote *remote.Remot
 		if err != nil {
 			fmt.Println("Error sending message to remote actor:", err)
 		}
-		fmt.Printf("[DEBUG] ClusterActor %s Health check successful for %s:%s\n", c.id, node.hostname, node.port)
+		// fmt.Printf("[DEBUG] ClusterActor %s Health check successful for %s:%s\n", c.id, node.hostname, node.port)
 
 		nodeAddress := HostnamePortToAddress(node.hostname, node.port)
 		closestNodes := c.dht.Find(node.nodeId)
@@ -320,7 +316,7 @@ func (c *ClusterActor) suspectCheck(ctx actor.ActorContext, remote *remote.Remot
 				fmt.Println("Error sending message to remote actor:", err)
 			}
 		}
-		fmt.Printf("[DEBUG] ClusterActor %s Suspect check failed for %s:%s, setting suspect\n", c.id, node.hostname, node.port)
+		// fmt.Printf("[DEBUG] ClusterActor %s Suspect check failed for %s:%s, setting suspect\n", c.id, node.hostname, node.port)
 
 		return
 	} else if node.state == NodeSuspect && node.lastPing.Add(10*time.Second).After(time.Now()) {
@@ -338,7 +334,7 @@ func (c *ClusterActor) suspectCheck(ctx actor.ActorContext, remote *remote.Remot
 				fmt.Println("Error sending message to remote actor:", err)
 			}
 		}
-		fmt.Printf("[DEBUG] ClusterActor %s Suspect check failed for %s:%s, setting suspect\n", c.id, node.hostname, node.port)
+		// fmt.Printf("[DEBUG] ClusterActor %s Suspect check failed for %s:%s, setting suspect\n", c.id, node.hostname, node.port)
 		return
 	} else if node.state == NodeSuspect && node.lastPing.Add(10*time.Second).Before(time.Now()) {
 
@@ -513,13 +509,13 @@ func (c *ClusterActor) handleGossipAckReq(ctx actor.ActorContext) {
 }
 
 func (c *ClusterActor) sendMessageToRemoteActor(ctx actor.ActorContext, remoteAddress, actorName string, message interface{}) error {
-	log.Printf("[DEBUG] ClusterActor %s Sending message to remote actor %s, actor name: %s\n", c.id, remoteAddress, actorName)
+	// log.Printf("[DEBUG] ClusterActor %s Sending message to remote actor %s, actor name: %s\n", c.id, remoteAddress, actorName)
 	remoteActorPID, err := c.remote.SpawnRemoteClusterActor(remoteAddress, actorName)
 	if err != nil {
 		return fmt.Errorf("error spawning remote actor: %w", err)
 	}
 
-	log.Printf("[DEBUG] Remote actor spawned with PID: %s\n", remoteActorPID)
+	// log.Printf("[DEBUG] Remote actor spawned with PID: %s\n", remoteActorPID)
 
 	hostNodeAddress := fmt.Sprintf("%s:%s", c.hostname, c.port)
 	err = c.remote.MakeActorDiscoverable(*ctx.Self(), "cluster-actor-"+hostNodeAddress)
@@ -527,7 +523,7 @@ func (c *ClusterActor) sendMessageToRemoteActor(ctx actor.ActorContext, remoteAd
 		return fmt.Errorf("error making actor discoverable: %w", err)
 	}
 
-	log.Printf("[DEBUG] Making actor discoverable with PID: %s\n", *ctx.Self())
+	// log.Printf("[DEBUG] Making actor discoverable with PID: %s\n", *ctx.Self())
 
 	ctx.Send(message, remoteActorPID)
 	time.Sleep(5 * time.Millisecond)

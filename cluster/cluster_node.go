@@ -3,7 +3,6 @@ package cluster
 import (
 	"light-actor-go/actor"
 	"light-actor-go/remote"
-	"log"
 )
 
 type ClusterNode struct {
@@ -17,12 +16,9 @@ func NewClusterNode(actorSystem *actor.ActorSystem, remoteConfig remote.RemoteCo
 		remote: remote.NewRemote(remoteConfig, actorSystem),
 	}
 
-	log.Printf("[CLUSTER NODE] Custer node: %v\n", clusterNode)
-
 	clusterProps := actor.NewActorPropsWithStrategies(nil, actor.NewRestartAllStrategy(), actor.NewRestartAllStrategy())
 	clusterActorName := "cluster-actor-" + remoteConfig.Addr
 	hostname, port := AddressToHostnamePort(remoteConfig.Addr)
-	log.Println("[CLUSTER NODE] Actor System: ", clusterNode.remote.ActorSystem())
 	nodeActorPID, err := clusterNode.remote.ActorSystem().SpawnActor(NewClusterActor(clusterActorName, hostname, port, clusterNode.remote), *clusterProps)
 	if err != nil {
 		panic(err)
@@ -48,4 +44,8 @@ func (c *ClusterNode) LeaveCluster(hostname, port string) {
 
 func (c *ClusterNode) Address() string {
 	return c.remote.Address()
+}
+
+func (c *ClusterNode) Actor() actor.PID {
+	return *c.nodeActor
 }

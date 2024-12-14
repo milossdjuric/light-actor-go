@@ -5,7 +5,6 @@ import (
 	"light-actor-go/actor"
 	"light-actor-go/cluster"
 	"light-actor-go/remote"
-	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,7 +12,6 @@ import (
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
 
 	// Create node configurations
 	nodes := []*cluster.ClusterNode{
@@ -47,7 +45,12 @@ func main() {
 		nodes[i].JoinCluster("127.0.0.1", "8010")
 	}
 
-	simulateNodeFailures(nodes)
+	time.Sleep(1 * time.Second)
+
+	for i := len(nodes) - 1; i >= 0; i-- {
+		time.Sleep(1 * time.Second)
+		nodes[i].LeaveCluster("127.0.0.1", "8010")
+	}
 
 	// Handle shutdown signals to gracefully terminate the cluster
 	shutdown := make(chan os.Signal, 1)
@@ -55,26 +58,4 @@ func main() {
 
 	<-shutdown
 	fmt.Println("Shutting down cluster nodes")
-}
-
-func simulateNodeFailures(nodes []*cluster.ClusterNode) {
-	// for {
-	time.Sleep(time.Duration(1 * time.Second)) // Random failure interval
-	failingNodeIndex := rand.Intn(len(nodes))
-	failingNode := nodes[failingNodeIndex]
-
-	if failingNodeIndex == 0 {
-		// continue
-		return
-	}
-	fmt.Printf("Simulating failure: Shutting down Node %d at %s\n", failingNodeIndex+1, failingNode.Address())
-
-	failingNode.LeaveCluster("127.0.0.1", "8010")
-
-	// Optionally, restart the node after some delay
-	restartDelay := time.Duration(20 * time.Second)
-	time.Sleep(restartDelay)
-	fmt.Printf("Restarting Node %d at %s after %v\n", failingNodeIndex+1, failingNode.Address(), restartDelay)
-	failingNode.JoinCluster("127.0.0.1", "8010")
-	// }
 }
