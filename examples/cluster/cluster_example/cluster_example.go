@@ -52,7 +52,6 @@ func main() {
 		nodes[i].LeaveCluster("127.0.0.1", "8010")
 	}
 
-	// Handle shutdown signals to gracefully terminate the cluster
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 

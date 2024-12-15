@@ -29,9 +29,7 @@ func main() {
 	time.Sleep(2 * time.Second)
 
 	node2.LeaveCluster("127.0.0.1", "8060")
-	// go simulateNodeFailures(nodes)
 
-	// Handle shutdown signals to gracefully terminate the cluster
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 
