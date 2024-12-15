@@ -40,70 +40,70 @@ func NewClusterActor(id, hostname, port string, remote *remote.Remote) *ClusterA
 }
 
 func (c *ClusterActor) Receive(ctx actor.ActorContext) {
-	fmt.Printf("ClusterActor %s Received message type: %T\n", c.id, ctx.Message())
+	fmt.Printf("ClusterActor %s: Received message type: %T\n", c.id, ctx.Message())
 
 	// Check if the message is of type proto.Any (dynamic protobuf message)
 	switch msg := ctx.Message().(type) {
 	case actor.SystemMessage:
 		switch msg.Type {
 		case actor.SystemMessageStart:
-			fmt.Printf("ClusterActor %s Received SystemMessageStart, starting cluster actor.\n", c.id)
+			fmt.Printf("ClusterActor %s: Received SystemMessageStart, starting cluster actor.\n", c.id)
 		case actor.SystemMessageRestart:
-			fmt.Printf("ClusterActor %s Received SystemMessageRestart, restarting cluster actor.\n", c.id)
+			fmt.Printf("ClusterActor %s: Received SystemMessageRestart, restarting cluster actor.\n", c.id)
 		case actor.SystemMessageStop:
-			fmt.Printf("ClusterActor %s Received SystemMessageStop, stopping gossip.", c.id)
+			fmt.Printf("ClusterActor %s: Received SystemMessageStop, stopping gossip.", c.id)
 			c.stopGossip <- struct{}{}
 		case actor.SystemMessageGracefulStop:
-			fmt.Printf("ClusterActor %s Received SystemMessageGracefulStop, stopping gossip.", c.id)
+			fmt.Printf("ClusterActor %s: Received SystemMessageGracefulStop, stopping gossip.", c.id)
 			c.stopGossip <- struct{}{}
 		}
 	case *anypb.Any:
 		// Try to unmarshal the Any type message into a specific protobuf message
 		if err := c.handleProtoAny(ctx, msg); err != nil {
-			fmt.Printf("ClusterActor %s Failed to unmarshal proto.Any: %v\n", c.id, err)
+			fmt.Printf("ClusterActor %s: Failed to unmarshal proto.Any: %v\n", c.id, err)
 		}
 	case *JoinCluster:
-		fmt.Printf("ClusterActor %s Received JoinCluster, for cluster %s:%s\n", c.id, msg.Hostname, msg.Port)
+		fmt.Printf("ClusterActor %s: Received JoinCluster, for cluster %s:%s\n", c.id, msg.Hostname, msg.Port)
 		c.storeNode(ctx, msg.Hostname, msg.Port, NodeHealthy, time.Now())
 		c.startGossip(ctx)
 		c.inCluster = true
 	case *LeaveCluster:
-		fmt.Printf("ClusterActor %s Received LeaveCluster, for cluster %s:%s\n", c.id, msg.Hostname, msg.Port)
+		fmt.Printf("ClusterActor %s: Received LeaveCluster, for cluster %s:%s\n", c.id, msg.Hostname, msg.Port)
 		c.inCluster = false
 		c.disownSelf(ctx)
 	case *Gossip:
-		fmt.Printf("ClusterActor %s Received Gossip\n", c.id)
+		fmt.Printf("ClusterActor %s: Received Gossip\n", c.id)
 		c.gossip(ctx, c.remote)
 	case *GossipBatch:
-		fmt.Printf("ClusterActor %s Received GossipBatch\n", c.id)
+		fmt.Printf("ClusterActor %s: Received GossipBatch\n", c.id)
 		c.gossipBatch(ctx, c.remote)
 	case *SwimPing:
-		fmt.Printf("ClusterActor %s Received SwimPing\n", c.id)
+		fmt.Printf("ClusterActor %s: Received SwimPing\n", c.id)
 		if c.inCluster {
 			c.handleGossipPing(ctx)
 		}
 	case *SwimAck:
-		fmt.Printf("ClusterActor %s Received SwimAck\n", c.id)
+		fmt.Printf("ClusterActor %s: Received SwimAck\n", c.id)
 		if c.inCluster {
 			c.handleGossipAck(ctx)
 		}
 	case *SwimPingReq:
-		fmt.Printf("ClusterActor %s Received SwimPingReq\n", c.id)
+		fmt.Printf("ClusterActor %s: Received SwimPingReq\n", c.id)
 		if c.inCluster {
 			c.handleGossipPingReq(ctx)
 		}
 	case *SwimAckReq:
-		fmt.Printf("ClusterActor %s Received SwimAckReq\n", c.id)
+		fmt.Printf("ClusterActor %s: Received SwimAckReq\n", c.id)
 		if c.inCluster {
 			c.handleGossipAckReq(ctx)
 		}
 	case *SuspectCheck:
-		fmt.Printf("ClusterActor %s Received SuspectCheck\n", c.id)
+		fmt.Printf("ClusterActor %s: Received SuspectCheck\n", c.id)
 		if c.inCluster {
 			c.suspectCheck(ctx, c.remote)
 		}
 	default:
-		fmt.Printf("ClusterActor %s Received unknown message type: %T\n", c.id, msg)
+		fmt.Printf("ClusterActor %s: Received unknown message type: %T\n", c.id, msg)
 	}
 }
 
@@ -117,7 +117,7 @@ func (c *ClusterActor) handleProtoAny(ctx actor.ActorContext, msg *anypb.Any) er
 		if err := msg.UnmarshalTo(swimPing); err != nil {
 			return fmt.Errorf("error unmarshalling SwimPing: %w", err)
 		}
-		fmt.Printf("PbAny ClusterActor %s Received SwimPing from %s\n", c.id, swimPing.Sender)
+		fmt.Printf("PbAny ClusterActor %s: Received SwimPing from %s\n", c.id, swimPing.Sender)
 		ctx.Send(swimPing, *ctx.Self())
 
 	case "type.googleapis.com/cluster.SwimAck":
@@ -125,7 +125,7 @@ func (c *ClusterActor) handleProtoAny(ctx actor.ActorContext, msg *anypb.Any) er
 		if err := msg.UnmarshalTo(swimAck); err != nil {
 			return fmt.Errorf("error unmarshalling SwimAck: %w", err)
 		}
-		fmt.Printf("PbAny ClusterActor %s Received SwimAck from %s\n", c.id, swimAck.Sender)
+		fmt.Printf("PbAny ClusterActor %s: Received SwimAck from %s\n", c.id, swimAck.Sender)
 		ctx.Send(swimAck, *ctx.Self())
 
 	case "type.googleapis.com/cluster.SwimPingReq":
@@ -133,7 +133,7 @@ func (c *ClusterActor) handleProtoAny(ctx actor.ActorContext, msg *anypb.Any) er
 		if err := msg.UnmarshalTo(swimPingReq); err != nil {
 			return fmt.Errorf("error unmarshalling SwimPingReq: %w", err)
 		}
-		fmt.Printf("PbAny ClusterActor %s Received SwimPingReq from %s\n", c.id, swimPingReq.Sender)
+		fmt.Printf("PbAny ClusterActor %s: Received SwimPingReq from %s\n", c.id, swimPingReq.Sender)
 		ctx.Send(swimPingReq, *ctx.Self())
 
 	case "type.googleapis.com/cluster.SwimAckReq":
@@ -141,7 +141,7 @@ func (c *ClusterActor) handleProtoAny(ctx actor.ActorContext, msg *anypb.Any) er
 		if err := msg.UnmarshalTo(swimAckReq); err != nil {
 			return fmt.Errorf("error unmarshalling SwimAckReq: %w", err)
 		}
-		fmt.Printf("PbAny ClusterActor %s Received SwimAckReq from %s\n", c.id, swimAckReq.Sender)
+		fmt.Printf("PbAny ClusterActor %s: Received SwimAckReq from %s\n", c.id, swimAckReq.Sender)
 		ctx.Send(swimAckReq, *ctx.Self())
 	default:
 		return fmt.Errorf("unknown proto.Any typeUrl: %s", msg.TypeUrl)
@@ -150,7 +150,7 @@ func (c *ClusterActor) handleProtoAny(ctx actor.ActorContext, msg *anypb.Any) er
 }
 
 func (c *ClusterActor) storeNode(ctx actor.ActorContext, address, port string, state KademliaNodeState, lastPing time.Time) {
-	fmt.Printf("ClusterActor %s Storing node %s:%s in DHT\n", c.id, address, port)
+	fmt.Printf("ClusterActor %s: Storing node %s:%s in DHT\n", c.id, address, port)
 	c.dht.Store(address, port, state, lastPing)
 }
 
@@ -181,7 +181,7 @@ func (c *ClusterActor) gossip(ctx actor.ActorContext, remote *remote.Remote) {
 	closestNodesStringified := c.dht.FindStringified(c.dht.nodeId)
 	node := c.dht.RendezvousNode(closestNodesStringified)
 	if node.hostname == "" && node.port == "" && node.nodeId == "" {
-		fmt.Println("ClusterActor %s No nodes in DHT to gossip to", c.id)
+		fmt.Println("ClusterActor %s: No nodes in DHT to gossip to", c.id)
 		return
 	}
 
@@ -198,7 +198,7 @@ func (c *ClusterActor) gossip(ctx actor.ActorContext, remote *remote.Remote) {
 		}
 	}
 
-	fmt.Printf("ClusterActor %s Gossiping to %s:%s\n", c.id, node.hostname, node.port)
+	fmt.Printf("ClusterActor %s: Gossiping to %s:%s\n", c.id, node.hostname, node.port)
 
 	err := c.sendMessageToRemoteActor(ctx,
 		HostnamePortToAddress(node.hostname, node.port),
@@ -206,7 +206,7 @@ func (c *ClusterActor) gossip(ctx actor.ActorContext, remote *remote.Remote) {
 		swimPing,
 	)
 	if err != nil {
-		fmt.Println("ClusterActor %s Error sending message to remote actor:", c.id, err)
+		fmt.Println("ClusterActor %s: Error sending message to remote actor:", c.id, err)
 	}
 }
 
@@ -215,7 +215,7 @@ func (c *ClusterActor) gossipBatch(ctx actor.ActorContext, remote *remote.Remote
 	closestNodesStringified := c.dht.FindStringified(c.dht.nodeId)
 	nodes := c.dht.RendezvousNodeBatch(closestNodesStringified)
 	if len(nodes) == 0 {
-		fmt.Println("ClusterActor %s No nodes in DHT to gossip to", c.id)
+		fmt.Println("ClusterActor %s: No nodes in DHT to gossip to", c.id)
 		return
 	}
 
@@ -238,7 +238,7 @@ func (c *ClusterActor) gossipBatch(ctx actor.ActorContext, remote *remote.Remote
 			swimPing,
 		)
 		if err != nil {
-			fmt.Println("ClusterActor %s Error sending message to remote actor:", c.id, err)
+			fmt.Println("ClusterActor %s: Error sending message to remote actor:", c.id, err)
 		}
 	}
 }
@@ -252,7 +252,7 @@ func (c *ClusterActor) gossipDisownSelf(ctx actor.ActorContext) {
 
 	randomNodes := c.dht.RendezvousNodeBatch(c.dht.nodeId)
 	if len(randomNodes) == 0 {
-		fmt.Println("ClusterActor %s No nodes in DHT to gossip to", c.id)
+		fmt.Println("ClusterActor %s: No nodes in DHT to gossip to", c.id)
 		return
 	}
 	for _, node := range randomNodes {
@@ -267,10 +267,10 @@ func (c *ClusterActor) gossipDisownSelf(ctx actor.ActorContext) {
 			},
 		)
 		if err != nil {
-			fmt.Println("ClusterActor %s Error sending message to remote actor:", c.id, err)
+			fmt.Println("ClusterActor %s: Error sending message to remote actor:", c.id, err)
 		}
 	}
-	fmt.Printf("ClusterActor %s Disowning self\n", c.id)
+	fmt.Printf("ClusterActor %s: Disowning self\n", c.id)
 }
 
 func (c *ClusterActor) suspectCheck(ctx actor.ActorContext, remote *remote.Remote) {
@@ -291,9 +291,9 @@ func (c *ClusterActor) suspectCheck(ctx actor.ActorContext, remote *remote.Remot
 				Target: HostnamePortToAddress(node.hostname, node.port),
 			})
 		if err != nil {
-			fmt.Println("ClusterActor %s Error sending message to remote actor:", c.id, err)
+			fmt.Println("ClusterActor %s: Error sending message to remote actor:", c.id, err)
 		}
-		// fmt.Printf("[DEBUG] ClusterActor %s Health check successful for %s:%s\n", c.id, node.hostname, node.port)
+		// fmt.Printf("[DEBUG] ClusterActor %s: Health check successful for %s:%s\n", c.id, node.hostname, node.port)
 
 		nodeAddress := HostnamePortToAddress(node.hostname, node.port)
 		closestNodes := c.dht.Find(node.nodeId)
@@ -307,7 +307,7 @@ func (c *ClusterActor) suspectCheck(ctx actor.ActorContext, remote *remote.Remot
 					Target: nodeAddress,
 				})
 			if err != nil {
-				fmt.Println("ClusterActor %s Error sending message to remote actor:", c.id, err)
+				fmt.Println("ClusterActor %s: Error sending message to remote actor:", c.id, err)
 			}
 		}
 		return
@@ -323,7 +323,7 @@ func (c *ClusterActor) suspectCheck(ctx actor.ActorContext, remote *remote.Remot
 					Target: nodeAddress,
 				})
 			if err != nil {
-				fmt.Println("ClusterActor %s Error sending message to remote actor:", c.id, err)
+				fmt.Println("ClusterActor %s: Error sending message to remote actor:", c.id, err)
 			}
 		}
 		return
@@ -333,7 +333,7 @@ func (c *ClusterActor) suspectCheck(ctx actor.ActorContext, remote *remote.Remot
 		// randomNodes := c.dht.RandomNodesBatch()
 		randomNodes := c.dht.RendezvousNodeBatch(node.nodeId)
 		if len(randomNodes) == 0 {
-			fmt.Println("ClusterActor %s No nodes in DHT to gossip to", c.id)
+			fmt.Println("ClusterActor %s: No nodes in DHT to gossip to", c.id)
 			return
 		}
 		// disseminate disown message to random nodes
@@ -346,7 +346,7 @@ func (c *ClusterActor) suspectCheck(ctx actor.ActorContext, remote *remote.Remot
 					Disowned: &DisownedEntry{Target: HostnamePortToAddress(node.hostname, node.port), SeenCount: 0},
 				})
 			if err != nil {
-				fmt.Println("ClusterActor %s Error sending message to remote actor:", c.id, err)
+				fmt.Println("ClusterActor %s: Error sending message to remote actor:", c.id, err)
 			}
 		}
 	}
@@ -378,7 +378,7 @@ func (c *ClusterActor) handleGossipPing(ctx actor.ActorContext) {
 	ackMsg := &SwimAck{Sender: senderAddress}
 	remoteActorPID, err := c.remote.SpawnRemoteClusterActor(senderAddress, "cluster-actor-"+senderAddress)
 	if err != nil {
-		fmt.Println("ClusterActor %s Error spawning remote sender actor:", c.id, err)
+		fmt.Println("ClusterActor %s: Error spawning remote sender actor:", c.id, err)
 		return
 	}
 	ctx.Send(ackMsg, remoteActorPID)
@@ -398,8 +398,8 @@ func (c *ClusterActor) handleGossipPing(ctx actor.ActorContext) {
 					Target: senderAddress,
 				})
 			if err != nil {
-				fmt.Printf("ClusterActor %s Error sending message from cluster-actor %s to remote actor: %v\n", c.id, hostAddress, err)
-				fmt.Println("ClusterActor %s Error sending message to remote actor:", c.id, err)
+				fmt.Printf("ClusterActor %s: Error sending message from cluster-actor %s to remote actor: %v\n", c.id, hostAddress, err)
+				fmt.Println("ClusterActor %s: Error sending message to remote actor:", c.id, err)
 			}
 		}
 	}
@@ -446,7 +446,7 @@ func (c *ClusterActor) handleGossipPingReq(ctx actor.ActorContext) {
 
 		remoteActorPID, err := c.remote.SpawnRemoteClusterActor(nodeAddress, "cluster-actor-"+nodeAddress)
 		if err != nil {
-			fmt.Println("ClusterActor %s Error spawning remote actor:", c.id, err)
+			fmt.Println("ClusterActor %s: Error spawning remote actor:", c.id, err)
 			continue
 		}
 
@@ -490,7 +490,7 @@ func (c *ClusterActor) handleGossipAckReq(ctx actor.ActorContext) {
 
 		remoteActorPID, err := c.remote.SpawnRemoteClusterActor(nodeAddress, "cluster-actor-"+nodeAddress)
 		if err != nil {
-			fmt.Println("ClusterActor %s Error spawning remote actor:", c.id, err)
+			fmt.Println("ClusterActor %s: Error spawning remote actor:", c.id, err)
 			continue
 		}
 
