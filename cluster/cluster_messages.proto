@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package cluster;
+
+option go_package = "light-actor-go/cluster"; // Ensure this points to the correct Go package path
+
+// Represents a request to join a cluster.
+message JoinCluster {
+  string hostname = 1;
+  string port = 2;
+}
+
+// Represents a request to leave a cluster.
+message LeaveCluster{
+  string hostname = 1;
+  string port = 2;
+}
+
+// Represents gossip containing a disowned entry.
+message Gossip {    
+  DisownedEntry disowned = 1;
+}
+
+// Represents a gossip message for batch and a disowned entry.
+message GossipBatch {
+  DisownedEntry disowned = 1; 
+}
+
+// Represents a suspect check.
+message SuspectCheck {}
+
+// Represents an entry that has been disowned.
+message DisownedEntry {
+  string target = 1;
+  int32 seenCount = 2;
+}
+
+// Represents a SWIM Ping message.
+message SwimPing {
+  string sender = 1;
+  string target = 2;
+  DisownedEntry disowned = 3;
+}
+
+// Represents a SWIM Acknowledgment (ACK) message.
+message SwimAck {
+  string sender = 1;
+  string target = 2;
+}
+
+// Represents a SWIM Ping Request message.
+message SwimPingReq {
+  string sender = 1;
+  string target = 2;
+  DisownedEntry disowned = 3;
+}
+
+// Represents a SWIM ACK Request message.
+message SwimAckReq {
+  string sender = 1;
+  string target = 2;
+}

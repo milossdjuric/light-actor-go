@@ -138,11 +138,11 @@ func (a *GrandChildActor) Receive(ctx actor.ActorContext) {
 }
 
 // In the example, we make a NotPanic failure in the grandchild actor, which is first handled by the child actor
-// and then escalated to the parent actor. The child and grandchild are then resumed with working normally
+// and then escalated to the parent actor. The child is then restarted.
 func main() {
 	actorSystem := actor.NewActorSystem()
 
-	props := actor.NewActorPropsWithStrategies(nil, actor.NewResumeOneStrategy(), actor.NewResumeOneStrategy())
+	props := actor.NewActorPropsWithStrategies(nil, actor.NewRestartOneStrategy(), actor.NewRestartOneStrategy())
 
 	// Spawn the top-level parent actor
 	parentPID, err := actorSystem.SpawnActor(&ParentActor{}, *props)
